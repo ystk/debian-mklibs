@@ -1,3 +1,69 @@
+mklibs (0.1.40) unstable; urgency=medium
+
+  [ Ian Campbell ]
+  * Ignore all ARM EABI symbols (__aeabi_*). These are artefacts of the
+    ABI and not real symbols which need to be present (See: #758581).
+    Thanks, Adam Conrad!
+
+ -- Cyril Brulebois <kibi@debian.org>  Mon, 25 Aug 2014 03:49:55 +0200
+
+mklibs (0.1.39) unstable; urgency=medium
+
+  * Sort objects and libraries to reduce entropy in the output, which
+    should make d-i build logs more easily post-processable.
+
+ -- Cyril Brulebois <kibi@debian.org>  Sat, 01 Mar 2014 19:25:40 +0100
+
+mklibs (0.1.38) unstable; urgency=low
+
+  [ Dmitrijs Ledkovs ]
+  * Set debian source format to '3.0 (native)'.
+  * Set Vcs-* to canonical format.
+  * Simply use (>= 9) version specifier for debhelper.
+
+  [ Christian Perrier ]
+  * Add myself to Uploaders
+  * Drop Phil Blundell, Tollef Fog Heen, Jeff Bailey from Uploaders as they
+    haven't worked on the package for a very long time. Thanks for your
+    pastwork.
+
+ -- Christian Perrier <bubulle@debian.org>  Sun, 14 Jul 2013 12:57:49 +0200
+
+mklibs (0.1.37) unstable; urgency=low
+
+  * Stop handling the linker as "just another library", and instead make
+    sure it gets installed to the path specified in ELF headers (closes:
+    #256998; thanks, Adam Conrad).
+  * Switch from python-support to dh_python2 (thanks, Matthias Klose).
+  * Properly byte-compile modules under /usr/lib/mklibs/python/.
+  * Switch to debhelper 9, thereby making use of dpkg-buildflags.
+
+ -- Colin Watson <cjwatson@debian.org>  Fri, 17 May 2013 12:43:08 +0100
+
+mklibs (0.1.36) unstable; urgency=low
+
+  * Team upload
+
+  [ Colin Watson ]
+  * Use AC_CANONICAL_HOST rather than AC_CANONICAL_TARGET.  We do not use
+    the results of the latter, and it causes warnings from autoconf due to
+    macro ordering relative to AM_INIT_AUTOMAKE.
+
+ -- Christian Perrier <bubulle@debian.org>  Thu, 16 May 2013 18:08:18 +0200
+
+mklibs (0.1.35) unstable; urgency=low
+
+  [ Cyril Brulebois ]
+  * Simplify autoreconfing:
+    - Add dh-autoreconf build-dep.
+    - Add “--with autoreconf” accordingly.
+    - Get rid of the “configure” target accordingly.
+
+  [ Colin Watson ]
+  * Depend on dpkg-dev for dpkg-architecture (LP: #977347).
+
+ -- Christian Perrier <bubulle@debian.org>  Wed, 26 Dec 2012 07:54:02 +0100
+
 mklibs (0.1.34) unstable; urgency=low
 
   [ Cyril Brulebois ]

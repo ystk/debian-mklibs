@@ -137,6 +137,14 @@ class UndefinedSymbol(Symbol):
         super(UndefinedSymbol, self).__init__(name, version, library)
         self.weak, self.library = weak, library
 
+def symbol_is_blacklisted(name):
+    # The ARM Embedded ABI spec states symbols under this namespace as
+    # possibly appearing in output objects.
+    if name.startswith("__aeabi_"):
+        return True
+
+    return False
+
 # Return undefined symbols in an object as a set of tuples (name, weakness)
 def undefined_symbols(obj):
     if not os.access(obj, os.F_OK):
@@ -147,6 +155,9 @@ def undefined_symbols(obj):
     result = []
     for line in output:
         name, weak_string, version_string, library_string = line.split()[:4]
+
+        if symbol_is_blacklisted(name):
+            continue
 
         weak = False
         if weak_string.lower() == 'true':
@@ -430,12 +441,10 @@ if not ldlib:
 if not ldlib:
     sys.exit("E: Dynamic linker not found, aborting.")
 
-ldlib = sysroot + ldlib
-
 debug(DEBUG_NORMAL, "I: Using", ldlib, "as dynamic linker.")
 
 # Check for rpaths
-for obj in objects.values():
+for obj in sorted(objects.values()):
     rpath_val = rpath(obj)
     if rpath_val:
         if root:
@@ -456,8 +465,8 @@ while 1:
     debug(DEBUG_NORMAL, "I: library reduction pass", `passnr`)
     if debuglevel >= DEBUG_VERBOSE:
         print "Objects:",
-        for obj in objects.values():
-            print obj[string.rfind(obj, '/') + 1:],
+        for obj in sorted([x[string.rfind(x, '/') + 1:] for x in objects.values()]):
+            print obj,
         print
 
     passnr = passnr + 1
@@ -473,14 +482,14 @@ while 1:
             objects[inode] = obj
 
     # DEBUG
-    for obj in objects.values():
+    for obj in sorted(objects.values()):
         small_libs.append(obj)
         debug(DEBUG_VERBOSE, "Object:", obj)
 
     # calculate what symbols and libraries are needed
     needed_symbols = {}
     libraries = set(force_libs)
-    for obj in objects.values():
+    for obj in sorted(objects.values()):
         for symbol in undefined_symbols(obj):
             # Some undefined symbols in libthread_db are defined in
             # the application that uses it.  __gnu_local_gp is defined
@@ -565,7 +574,7 @@ while 1:
             library_symbols_used[lib].add(library_symbols[lib][name])
 
     # reduce libraries
-    for library in libraries:
+    for library in sorted(libraries):
         debug(DEBUG_VERBOSE, "reducing", library)
         debug(DEBUG_SPAM, "using: " + ' '.join([str(i) for i in library_symbols_used[library]]))
         so_file = find_lib(library)
@@ -645,7 +654,7 @@ for lib in regexpfilter(os.listdir(dest_path), "(.*-so)$"):
     os.remove(dest_path + "/" + lib)
 
 # Canonicalize library names.
-for lib in regexpfilter(os.listdir(dest_path), "(.*so[.\d]*)$"):
+for lib in sorted(regexpfilter(os.listdir(dest_path), "(.*so[.\d]*)$")):
     this_lib_path = dest_path + "/" + lib
     if os.path.islink(this_lib_path):
         debug(DEBUG_VERBOSE, "Unlinking %s." % lib)
@@ -657,12 +666,22 @@ for lib in regexpfilter(os.listdir(dest_path), "(.*so[.\d]*)$"):
         os.rename(dest_path + "/" + lib, dest_path + "/" + soname)
 
 # Make sure the dynamic linker is present and is executable
+# at its correct location (and not duplicated in /lib)
 ld_file_name = os.path.basename(ldlib)
+ld_path_name = os.path.dirname(ldlib)
+ld_full_path = "../" + ldlib
 ld_file = find_lib(ld_file_name)
 
-if not os.access(dest_path + "/" + ld_file_name, os.F_OK):
-    debug(DEBUG_NORMAL, "I: stripping and copying dynamic linker.")
-    command(target + "objcopy", "--strip-unneeded -R .note -R .comment",
-            ld_file, dest_path + "/" + ld_file_name)
+if ld_path_name != "/lib":
+    if os.access(dest_path + "/" + ld_file_name, os.F_OK):
+        os.remove(dest_path + "/" + ld_file_name)
 
-os.chmod(dest_path + "/" + ld_file_name, 0755)
+if not os.path.exists(dest_path + "/../" + ld_path_name):
+    os.mkdir(dest_path + "/../" + ld_path_name)
+
+if not os.access(dest_path + "/" + ld_full_path, os.F_OK):
+    debug(DEBUG_NORMAL, "I: stripping and copying dynamic linker to " + ld_full_path)
+    command(target + "objcopy", "--strip-unneeded -R .note -R .comment",
+            ld_file, dest_path + "/" + ld_full_path)
+
+os.chmod(dest_path + "/" + ld_full_path, 0755)
